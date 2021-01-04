@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<header>
+<style>
+.highLight{
+	stroke : yellow
+}
+
+.svgText {
+    //pointer-events: none;
+}
+
+</style>
+
+<style type="text/css">
+    .context-menu {
+        position: absolute;
+        text-align: center;
+        background: lightgray;
+        border: 1px solid black;
+    }
+
+    .context-menu ul {
+        padding: 0px;
+        margin: 0px;
+        min-width: 120px;
+        list-style: none;
+    }
+
+    .context-menu ul li {
+        padding-bottom: 5px;
+        padding-top: 5px;
+        border: 1px solid black;
+    }
+
+    .context-menu ul li a {
+        text-decoration: none;
+        color: black;
+    }
+
+    .context-menu ul li:hover {
+        background: darkgray;
+    }
+</style>
+
+
+</header>
+<html>
+<body>
+Shape:
+<select id="shape"onChange="doChgShape(this)"> :
+ <option value="rect">Recangle</option>
+  <option value="circle">Circle</option>
+  <option value="line">Line</option>
+  <option value="text">Text</option>
+</select>
+<span style="margin-left :20px">Color :</span>
+<!--
+<select id="color">
+  <option value="#000000">Black</option>
+  <option value="#ffffff">White</option>
+  <option value="#ff0099">Pink</option>
+  <option value="#f3f313">Yellow</option>
+  <option value="#0dd5fc">Blue</option>
+  <option value="#83f52c">Green</option>
+</select>
+-->
+<input type="color" id="inputColor" onChange="doColorChange(this)">
+<span style="margin-left :20px">Draw :</span><input type="checkbox" id="isDraw" checked="true" onChange="doIsDraw()">
+<span style="margin-left :20px"><input id="delete" type="button" value="Delete" disabled="truw" onClick="doDelete()">
+<br>
+
+<svg id="svgMain" height="500" width="800" style="background-color:blue">
+
+	<circle id="1" cx="200" cy="200" r="50" stroke="black" stroke-width="3" fill="white" />
+	<text id="4" x="0" y="50" font-size="50px" fill="red" style="" >Please test SVG!</text>
+	<rect id="2" x="240" y="240" width="40" height="100" stroke="black" stroke-width="3" fill="white" />
+
+	<line id="3" x1="240" y1="240" x2="400" y2="400" stroke="black" />
+	<use href="#3" id="u3" stroke="grey" stroke-width="40" stroke-opacity="0" />
+
+	<circle id="p1" cx="150" cy="150" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+	<circle id="p2" cx="200" cy="150" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+	<circle id="p3" cx="250" cy="150" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+	<circle id="p4" cx="150" cy="200" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+	<circle id="p5" cx="250" cy="200" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+	<circle id="p6" cx="150" cy="250" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+	<circle id="p7" cx="200" cy="250" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+	<circle id="p8" cx="250" cy="250" r="3" stroke="yellow" stroke-width="3" fill="yellow" style="display: none;" onmouseover="doOnMouOverPt(this)" onmouseout="doOnMouOutPt(this)" />
+
+	<rect id="sRect1" x="150" y="150" width="100" height="100"
+		style="stroke-width: 1;stroke:yellow; stroke-dasharray: 10 5; fill: none; display : none  ; pointer-events: none;" />
+
+</svg>
+
+
+<input id="inputText" type="text" style="position : absolute ; display : none ;" onClick="doInputClick()" onInput="resizeInput(this)" onKeyUp="return doLimitSize(this,'up')" onKeyDown="return doLimitSize(this,'down')">
+
+<br>
+Position :  <span id="pos">0,0</span> &nbsp;&nbsp;&nbsp;&nbsp;
+Object :  <span id="obj"></span>
+
+
+
+<div id="contextMenu" class="context-menu"
+    style="display: none">
+    <ul>
+        <li><a href="javascript:doMoveToFront()">Move To Front</a></li>
+        <li><a href="javascript:doMoveToBack()">Move To Back</a></li>
+		<li><a href="javascript:doDelete()">Delete</a></li>
+    </ul>
+</div>
+
+
+
+</body>
+</html>
+
+<script>
+
+	var inputBoxChange = true;
+	const svgMain = document.getElementById("svgMain");
+	const sRect1 = document.getElementById("sRect1");
+	const isDraw = document.getElementById("isDraw");
+	const inputText = document.getElementById("inputText");
+	const btnDelete = document.getElementById("delete");
+	var mainWidth = svgMain.width.baseVal.value;
+	var mainHeight = svgMain.height.baseVal.value;
+
+	svgMain.addEventListener("mousemove", mMouseMove);
+	svgMain.addEventListener("mousedown", mMouseDown);
+	svgMain.addEventListener("mouseup", mMouseUp);
+	svgMain.addEventListener("mouseout", mMouseOut);
+
+	document.onclick = hideMenu;
+    document.oncontextmenu = rightClick;
+
+    function hideMenu() {
+        document.getElementById("contextMenu") .style.display = "none"
+    }
+
+    function rightClick(e) {
+        e.preventDefault();
+        if (document.getElementById("contextMenu") .style.display == "block")
+            hideMenu();
+        else{
+            var menu = document.getElementById("contextMenu")
+            menu.style.display = 'block';
+            menu.style.left = e.pageX + "px";
+            menu.style.top = e.pageY + "px";
+        }
+    }
+
+    function doMoveToFront(){
+		//console.log(mOverId +","+mSelectId);
+		var sElement = document.getElementById(mSelectId);
+		sElement.parentNode.appendChild(sElement);
+    }
+
+
+    function doMoveToBack(){
+		//console.log(mOverId +","+mSelectId);
+		var sElement = document.getElementById(mSelectId);
+		var firstChild = sElement.parentNode.firstChild; 
+		if (firstChild) { 
+			sElement.parentNode.insertBefore(sElement, firstChild); 
+		} ;
+    }
+
+
+	function doIsDraw(){
+		if(!isDraw.checked){
+			inputText.style.display = "none";
+			inputText.style.left = 0 + "px";
+			inputText.style.top = 0 + "px";
+			btnDelete.disabled = false;
+			mSelectId = -1;
+		}else{
+			showSelBox(false);
+			btnDelete.disabled = true;
+		}
+	}
+
+
+	function doInputClick(){
+		inputBoxChange = false;
+	}
+
+
+	function resizeInput(input) {
+		var width = input.style.width.replace("px","");
+		if(input.scrollWidth > width)
+		input.style.width = (input.scrollWidth-0) + "px";
+	}
+
+
+	function doLimitSize(input ,act) {
+		var width = input.style.width.replace("px","");
+		var height = input.style.height.replace("px","");
+		var left = input.style.left.replace("px","");
+		var top = input.style.top.replace("px","");
+		var font = inputText.style.fontSize.replace("px","");
+		var textPos = parseInt(left) + parseInt(width);
+		var svgPt = getSvgPoint(svgMain ,textPos, 0);
+		if(( parseInt(textPos) ) > mainWidth)return false;
+	}
+
+
+	function getSvgPoint(elem, x, y){
+		let p = svgMain.createSVGPoint();
+		p.x = x;
+		p.y = y;
+		return p.matrixTransform(elem.getScreenCTM().inverse());
+	}
+
+
+	function getMousePoint(evt){
+		var CTM = svgMain.getScreenCTM();
+		return{
+			x: (evt.clientX - CTM.e) / CTM.a,
+			y: (evt.clientY - CTM.f) / CTM.d
+		};
+	}
+
+
+	function doDelete(){
+		var eTarget = document.getElementById(mSelectId);
+		if(eTarget && eTarget instanceof SVGElement){
+			eTarget.remove();
+		}
+		showSelBox(false);
+	}
+
+
+	function doChgShape(shape){
+		isDraw.checked = true;
+		var eShape = shape.options[shape.selectedIndex].value;
+		if(eShape != "text"){
+			inputText.style.display = "none";
+			inputText.style.left = 0 + "px";
+			inputText.style.top = 0 + "px";
+			btnDelete.disabled = true;
+		}
+	}
+
+
+	function doColorChange(eInput){
+		//console.log(eInput.value);
+		if(document.getElementById(mSelectId)){
+			document.getElementById(mSelectId).setAttribute("fill" , eInput.value );
+		}
+	}
+
+
+	var mSelectId = -1;
+	var mOverId = -1;
+	var nObjectId = 5;
+	var mDragging = false;
+	var mResize = "";
+	var mMouseDownPos;
+	var mBox;
+
+
+	function setDragSize(eTarget , type , diff){
+		if(eTarget.tagName == "rect"){
+			if(type == "height")eTarget.setAttribute(type ,  mBox.height - diff > 0 ? mBox.height - diff : 5);
+			else eTarget.setAttribute(type ,  mBox.width - diff > 0 ? mBox.width - diff : 5);
+			setSBoxByTarget(eTarget);
+		}else if(eTarget.tagName == "circle"){
+			eTarget.setAttribute("r" , mBox.height/2 - diff > 0 ? mBox.height/2 - diff : 5);
+			setSBoxByTarget(eTarget);
+		}else if(eTarget.tagName == "line"){
+			eTarget.setAttribute( type == "width" ? "x2" : "y2"  , diff);
+			setSBoxByTarget(eTarget);
+		}else if(eTarget.tagName == "text"){
+			eTarget.setAttribute("r" , mBox.height/2 - diff > 0 ? mBox.height/2 - diff : 5);
+		}
+	}
+
+	var eLastYPos;
+	var eLastHeight;
+	var eLastDY;
+
+	var eLastXPos;
+	var eLastWide;
+	var eLastDX;
+
+	function mMouseMove(evt){
+		var eTarget = evt.target;
+		evt.preventDefault();
+		eTarget = conTarget(eTarget);
+		var mPos = getMousePoint(evt);
+
+		document.getElementById("pos").innerHTML = parseInt(mPos.x) + "," + parseInt(mPos.y) + "(" + evt.clientX + "," + evt.clientY + ")";
+
+		if(!isDraw.checked){
+
+			if(mResize != ""){
+				var eTarget =  document.getElementById(mSelectId);
+				showElement(document.getElementById(mSelectId));
+				var dx = mPos.x - mMouseDownPos.x;
+				var dy = mPos.y - mMouseDownPos.y;
+				if(mResize == "p7"){
+					if(eTarget.tagName == "circle" || eTarget.tagName == "rect"){
+						//eTarget.setAttribute("height" ,  mBox.height - eHDiff );
+						//var esBox = eTarget.getBoundingClientRect();
+						//var eSvgPt = getSvgPoint(svgMain, esBox.x, esBox.y);
+						//setSBox(eSvgPt.x , eSvgPt.y , esBox.width , esBox.height);
+						setDragSize(eTarget , "height" , - dy);
+					}else if(eTarget.tagName == "line"){
+						var transforms = eTarget.transform.baseVal;
+						var tx = (transforms.length > 0) ? transforms.getItem(0).matrix.e : 0;
+						var ty = (transforms.length > 0) ? transforms.getItem(0).matrix.f : 0;
+						var pty = eTarget.getAttribute("y2") > eTarget.getAttribute("y1") ? "y2" : "y1";
+						eTarget.setAttribute(pty , mPos.y - ty);
+						setSBoxByTarget(eTarget);
+					}else if(eTarget.tagName == "text"){
+						var mainWidth = svgMain.width.baseVal.value;
+						var mainHeight = svgMain.height.baseVal.value;
+						var transforms = eTarget.transform.baseVal;
+						var tx = (transforms.length > 0) ? transforms.getItem(0).matrix.e : 0;
+						var ty = (transforms.length > 0) ? transforms.getItem(0).matrix.f : 0;
+						var mBoxDOM = eTarget.getBoundingClientRect();
+					    var svgPt = getSvgPoint(svgMain , mBoxDOM.x , mBoxDOM.y);
+
+						var eYPos;
+						var eHeight;
+
+						if(eLastDY < dy){
+							if(svgPt.x + mBoxDOM.width < mainWidth && svgPt.y + mBoxDOM.height < mainHeight){
+								 eYPos = mBox.y + mBox.height - ty + dy - 6;
+								 eHeight = mBox.height + dy;
+								 eLastYPos = eYPos;
+								 eLastHeight = eHeight;
+								 eLastDY = dy;
+							}else{
+								eYPos = eLastYPos;
+								eHeight = eLastHeight;
+							}
+						}else{
+							 eYPos = mBox.y + mBox.height - ty + dy - 6;
+							 eHeight = mBox.height + dy;
+							 eLastYPos = eYPos;
+							 eLastHeight = eHeight;
+							 eLastDY = dy;
+						}
+
+						eTarget.style.fontSize = eHeight + "px";
+						eTarget.setAttribute("y" , eYPos);
+						setSBoxByTarget(eTarget);
+					}
+
+				}else if(mResize == "p5"){
+					if(eTarget.tagName == "circle"  || eTarget.tagName == "rect"){
+						var eTarget =  document.getElementById(mSelectId);
+						//eTarget.setAttribute("width" , mBox.width - dx );
+						//var esBox = eTarget.getBoundingClientRect();
+						//var eSvgPt = getSvgPoint(svgMain, esBox.x, esBox.y);
+						//setSBox(eSvgPt.x , eSvgPt.y , esBox.width , esBox.height);
+						setDragSize(eTarget , "width" , -dx);
+					}else if(eTarget.tagName == "line"){
+						var transforms = eTarget.transform.baseVal;
+						var tx = (transforms.length > 0) ? transforms.getItem(0).matrix.e : 0;
+						var ty = (transforms.length > 0) ? transforms.getItem(0).matrix.f : 0;
+						var ptx = eTarget.getAttribute("x2") > eTarget.getAttribute("x1") ? "x2" : "x1";
+						eTarget.setAttribute(ptx , mPos.x - tx);
+						setSBoxByTarget(eTarget);
+					}else if(eTarget.tagName == "text"){
+						var mainWidth = svgMain.width.baseVal.value;
+						var mainHeight = svgMain.height.baseVal.value;
+						var transforms = eTarget.transform.baseVal;
+						var tx = (transforms.length > 0) ? transforms.getItem(0).matrix.e : 0;
+						var ty = (transforms.length > 0) ? transforms.getItem(0).matrix.f : 0;
+						var mBoxDOM = eTarget.getBoundingClientRect();
+					    var svgPt = getSvgPoint(svgMain , mBoxDOM.x , mBoxDOM.y);
+
+						var eYPos;
+						var eHeight;
+
+						if(eLastDY < dy){
+							if(svgPt.x + mBoxDOM.width < mainWidth && svgPt.y + mBoxDOM.height < mainHeight){
+								 eYPos = mBox.y + mBox.height - ty + dy - 6;
+								 eHeight = mBox.height + dy;
+								 eLastYPos = eYPos;
+								 eLastHeight = eHeight;
+								 eLastDY = dy;
+							}else{
+								eYPos = eLastYPos;
+								eHeight = eLastHeight;
+							}
+						}else{
+							 eYPos = mBox.y + mBox.height - ty + dy - 6;
+							 eHeight = mBox.height + dy;
+							 eLastYPos = eYPos;
+							 eLastHeight = eHeight;
+							 eLastDY = dy;
+						}
+
+						eTarget.style.fontSize = eHeight + "px";
+						eTarget.setAttribute("y" , eYPos);
+						setSBoxByTarget(eTarget);
+					}
+				}else if(mResize == "p8"){
+					if(eTarget.tagName == "line"){
+						var transforms = eTarget.transform.baseVal;
+						var tx = (transforms.length > 0) ? transforms.getItem(0).matrix.e : 0;
+						var ty = (transforms.length > 0) ? transforms.getItem(0).matrix.f : 0;
+						var pty = eTarget.getAttribute("y2") > eTarget.getAttribute("y1") ? "y2" : "y1";
+						var ptx = eTarget.getAttribute("x2") > eTarget.getAttribute("x1") ? "x2" : "x1";
+						eTarget.setAttribute(ptx , mPos.x - tx);
+						eTarget.setAttribute(pty , mPos.y - ty);
+						setSBoxByTarget(eTarget);
+					}else if(eTarget.tagName == "text"){
+						var mainWidth = svgMain.width.baseVal.value;
+						var mainHeight = svgMain.height.baseVal.value;
+						var transforms = eTarget.transform.baseVal;
+						var tx = (transforms.length > 0) ? transforms.getItem(0).matrix.e : 0;
+						var ty = (transforms.length > 0) ? transforms.getItem(0).matrix.f : 0;
+						var mBoxDOM = eTarget.getBoundingClientRect();
+					    var svgPt = getSvgPoint(svgMain , mBoxDOM.x , mBoxDOM.y);
+
+						var eYPos;
+						var eHeight;
+
+						if(eLastDY < dy){
+							if(svgPt.x + mBoxDOM.width < mainWidth && svgPt.y + mBoxDOM.height < mainHeight){
+								 eYPos = mBox.y + mBox.height - ty + dy - 6;
+								 eHeight = mBox.height + dy;
+								 eLastYPos = eYPos;
+								 eLastHeight = eHeight;
+								 eLastDY = dy;
+							}else{
+								eYPos = eLastYPos;
+								eHeight = eLastHeight;
+							}
+						}else{
+							 eYPos = mBox.y + mBox.height - ty + dy - 6;
+							 eHeight = mBox.height + dy;
+							 eLastYPos = eYPos;
+							 eLastHeight = eHeight;
+							 eLastDY = dy;
+						}
+
+						eTarget.style.fontSize = eHeight + "px";
+						eTarget.setAttribute("y" , eYPos);
+						setSBoxByTarget(eTarget);
+					}else{
+
+						//eTarget.setAttribute("height" ,  mBox.height - eHDiff );
+						//var esBox = eTarget.getBoundingClientRect();
+						//var eSvgPt = getSvgPoint(svgMain, esBox.x, esBox.y);
+						//setSBox(eSvgPt.x , eSvgPt.y , esBox.width , esBox.height);
+						setDragSize(eTarget , "height" , -dy);
+
+						//eTarget.setAttribute("width" ,  mBox.width   - dx );
+						//var esBox = eTarget.getBoundingClientRect();
+						//var eSvgPt = getSvgPoint(svgMain, esBox.x, esBox.y);
+						//setSBox(eSvgPt.x , eSvgPt.y , esBox.width , esBox.height);
+						setDragSize(eTarget , "width" , -dx);
+					}
+				}
+			}else if(mDragging){
+				var eTarget = document.getElementById(mSelectId);
+				if(eTarget && eTarget.id != "svgMain" && inputText.style.display == "none"){
+
+					showElement(eTarget);
+					var bbox = eTarget.getBBox();
+					var dx = mPos.x - mMouseDownPos.x;
+					var dy = mPos.y - mMouseDownPos.y;
+
+					var mainWidth = svgMain.width.baseVal.value;
+					var mainHeight = svgMain.height.baseVal.value;
+
+					var minX = 0 - bbox.x;
+					var maxX = mainWidth - bbox.x - bbox.width;
+					var minY = 0 - bbox.y;
+					var maxY = mainHeight - bbox.y - bbox.height;
+
+					if(dx < minX) { dx = minX; } else if(dx > maxX) { dx = maxX; }
+					if(dy < minY) { dy = minY; } else if(dy > maxY) { dy = maxY; }
+
+					eTarget.setAttribute("transform", "translate(" + dx + "," + dy + ")");
+					transform.setTranslate(dx , dy);
+					setSBox(bbox.x + dx , bbox.y + dy , bbox.width , bbox.height);
+
+					if(eTarget.tagName == "line"){
+						var uTarget = document.getElementById("u" + mSelectId);
+						uTarget.setAttribute("x", 0 - dx);
+						uTarget.setAttribute("y", 0 - dy);
+					}
+				}
+			}else{
+				if(eTarget instanceof SVGElement && eTarget.id != "svgMain" && eTarget.id != "sRect1" ){
+					eTarget.classList.add("highLight");
+					mOverId = eTarget.id;
+					showElement(document.getElementById(eTarget.id));
+				}else{
+					if(mSelectId == -1){
+						document.getElementById("obj").innerHTML = "";
+					}
+				}
+
+			}
+		}
+	}
+
+	var transform;
+
+	function mMouseDown(evt){
+		evt.preventDefault();
+		var eTarget = evt.target;
+		mMouseDownPos = getMousePoint(evt);
+		if(isDraw.checked){
+			mDrawing(evt);
+		}else{
+			if(eTarget.id == "svgMain"){
+				if(inputText.style.display == "block"){
+					inputText.style.display = "none";
+					document.getElementById(mSelectId).innerHTML = inputText.value;
+					inputText.value = "";
+				}
+				showSelBox(false);
+				mDragging = false;
+				chgCursor("");
+				showElement("");
+				mSelectId = -1;
+				mResize = "";
+			}else if(eTarget.id == "p1" || eTarget.id == "p2"
+				|| eTarget.id == "p3" || eTarget.id == "p4"
+				|| eTarget.id == "p5" || eTarget.id == "p6"
+				|| eTarget.id == "p7" || eTarget.id == "p8"
+				){
+					mResize = eTarget.id;
+					var mBoxDOM = document.getElementById(mSelectId).getBoundingClientRect();
+					var svgPt = getSvgPoint(svgMain , mBoxDOM.x , mBoxDOM.y);
+					mBox = { x : svgPt.x, y : svgPt.y , width : mBoxDOM.width , height : mBoxDOM.height};
+			}else if(eTarget instanceof SVGElement &&  eTarget.id != "sRect1" ){
+					chgCursor("all-scroll");
+					//if (mOverId != "" && mOverId != "-1" ){
+						mSelectId = mOverId;
+					//} 
+					mDragging = true;
+					showSelBox(true);
+					if(mSelectId != -1){
+						var mBoxDOM = document.getElementById(mSelectId).getBoundingClientRect();
+						var svgPt = getSvgPoint(svgMain , mBoxDOM.x , mBoxDOM.y);
+						setSBoxByTarget(document.getElementById(mSelectId));
+
+						var transforms = eTarget.transform.baseVal;
+						if (transforms.length === 0 || transforms.getItem(0).type !== SVGTransform.SVG_TRANSFORM_TRANSLATE){
+						  var translate = svgMain.createSVGTransform();
+						  translate.setTranslate(0 , 0);
+						  eTarget.transform.baseVal.insertItemBefore(translate , 0);
+						}
+						transform = transforms.getItem(0);
+						mMouseDownPos.x -= transform.matrix.e;
+						mMouseDownPos.y -= transform.matrix.f;
+						var fill = document.getElementById(mSelectId).getAttribute("fill");
+						document.getElementById("inputColor").value = fill;
+
+					}else{
+						var eTarget = evt.target;
+						if(eTarget.tagName == "text"){
+							showSelBox(false);
+							var mBoxDOM = eTarget.getBoundingClientRect();
+							inputText.style.display = "block";
+							inputText.style.width = mBoxDOM.width + "px";
+							inputText.style.height = mBoxDOM.height + "px";
+							inputText.style.left = mBoxDOM.left + "px";
+							inputText.style.top = mBoxDOM.top + "px";
+							inputText.style.fontSize = window.getComputedStyle(eTarget , null).getPropertyValue("font-size");
+							inputText.style.fontFamily = window.getComputedStyle(eTarget , null).getPropertyValue("font-family");
+							inputText.style.color = eTarget.getAttribute("fill");
+							inputText.value = eTarget.innerHTML;
+							mSelectId = eTarget.id;
+						}
+					}
+			}
+		}
+	}
+
+
+	function mMouseUp(evt) {
+		evt.preventDefault();
+		if(!isDraw.checked){
+			document.body.style.cursor = "default";
+			mOverId = -1;
+			mResize = "";
+			mDragging = false;
+		}
+	}
+
+
+	function mMouseOut(evt) {
+		evt.preventDefault();
+		if(!isDraw.checked){
+			var eTarget = evt.target;
+			if(eTarget.tagName == "use"){
+				var eObject = eTarget.getAttribute("href");
+				eTarget = document.getElementById(eObject.substring(1));
+			}
+			eTarget.classList.remove("highLight");
+		}
+	}
+
+
+	function doOnMouOutPt(point){
+		chgCursor("");
+	}
+
+
+	function doOnMouOverPt(point){
+		chgCursor(point);
+	}
+
+
+	function chgCursor(ePoint){
+		var eCursor;
+		if(ePoint instanceof SVGElement){
+			switch(ePoint.id) {
+			  case "p1": eCursor = "se-resize"; break;
+			  case "p2": eCursor = "s-resize" ; break;
+			  case "p3": eCursor = "sw-resize"; break;
+			  case "p4": eCursor = "w-resize" ; break;
+			  case "p5": eCursor = "w-resize" ; break;
+			  case "p6": eCursor = "sw-resize"; break;
+			  case "p7": eCursor = "s-resize" ; break;
+			  case "p8": eCursor = "se-resize"; break;
+			}
+		}else if(ePoint != ""){
+			eCursor = ePoint;
+		}else{
+			eCursor = "auto";
+		}
+		document.body.style.cursor = eCursor;
+	}
+
+
+	function showSelBox(state){
+		var isShow = state ? "block":"none";
+		for( var i=1 ;i < 9; i++){
+			document.getElementById("p"+ i).style.display = isShow;
+			var sElement = document.getElementById("p"+ i);
+			sElement.parentNode.appendChild(sElement);
+		}
+		document.getElementById("sRect1").style.display = isShow;
+
+		var sElement = document.getElementById("sRect1");
+		sElement.parentNode.appendChild(sElement);
+	}
+
+
+	function setSBoxByTarget(eTarget){
+		var esBox = eTarget.getBoundingClientRect();
+		var eSvgPt = getSvgPoint(svgMain, esBox.x , esBox.y);
+		var x = eSvgPt.x;
+		var y = eSvgPt.y;
+		var width = esBox.width;
+		var height = esBox.height;
+		setSBox(x , y , width , height);
+	}
+
+
+	function setSBox(x , y , width , height ){
+
+		const p1 = document.getElementById("p1");
+		const p2 = document.getElementById("p2");
+		const p3 = document.getElementById("p3");
+		const p4 = document.getElementById("p4");
+		const p5 = document.getElementById("p5");
+		const p6 = document.getElementById("p6");
+		const p7 = document.getElementById("p7");
+		const p8 = document.getElementById("p8");
+
+		p1.setAttributeNS(null , "cx" , x );
+		p1.setAttributeNS(null , "cy" , y );
+		p2.setAttributeNS(null , "cx" , x + width/2);
+		p2.setAttributeNS(null , "cy" , y );
+		p3.setAttributeNS(null , "cx" , x + width);
+		p3.setAttributeNS(null , "cy" , y );
+
+		p4.setAttributeNS(null , "cx" , x );
+		p4.setAttributeNS(null , "cy" , y + height/2);
+		p5.setAttributeNS(null , "cx" , x + width);
+		p5.setAttributeNS(null , "cy" , y + height/2);
+
+		p6.setAttributeNS(null , "cx" , x );
+		p6.setAttributeNS(null , "cy" , y + height);
+		p7.setAttributeNS(null , "cx" , x + width/2);
+		p7.setAttributeNS(null , "cy" , y + height);
+		p8.setAttributeNS(null , "cx" , x + width);
+		p8.setAttributeNS(null , "cy" , y + height);
+
+		sRect1.setAttributeNS(null , "x" ,x );
+		sRect1.setAttributeNS(null , "y" ,y );
+		sRect1.setAttributeNS(null , "width" , width);
+		sRect1.setAttributeNS(null , "height" , height);
+	}
+
+
+	function showElement(eTarget){
+		if(eTarget == ""){
+			document.getElementById("obj").innerHTML = "";
+		}else{
+			eTarget = conTarget(eTarget);
+			var eBox = eTarget.getBoundingClientRect();
+			var eSvgPt = getSvgPoint(svgMain, eBox.x, eBox.y);
+			var eInform = "x="+ parseInt(eSvgPt.x) + ",y="+ parseInt(eSvgPt.y) + ",width="+ parseInt(eBox.width)+ ",height="+ parseInt(eBox.height);
+			document.getElementById("obj").innerHTML = eTarget.tagName + "("+ eInform+")";
+		}
+	}
+
+
+	function conTarget(eTarget){
+		if(eTarget.tagName && eTarget.tagName == "use"){
+			var eObject = eTarget.getAttribute("href");
+			return document.getElementById(eObject.substring(1));
+		}else{
+			return eTarget;
+		}
+	}
+
+
+	function mDrawing(evt){
+		evt.preventDefault();
+		var nObject;
+		mMouseDownPos = {x: evt.clientX, y:evt.clientY };
+		const svgns = "http://www.w3.org/2000/svg";
+		var shape = document.getElementById("shape");
+		var eShape = shape.options[shape.selectedIndex].value;
+		var start = getSvgPoint(svgMain, evt.clientX, evt.clientY);
+		var mColor = document.getElementById("inputColor").value;
+
+		if(eShape == "rect"){
+			nObject = document.createElementNS(svgns, "rect");
+		}else if(eShape == "circle"){
+			nObject = document.createElementNS(svgns, "circle");
+		}else if(eShape == "line"){
+			nObject = document.createElementNS(svgns, "line");
+		}else if(eShape == "text"){
+			if(inputText.style.display == "none"){
+				inputText.style.display = "block";
+				inputText.style.width = 5 + "px";
+				inputText.style.height = 5 + "px";
+				inputText.style.left = evt.clientX + "px";
+				inputText.style.top = evt.clientY + "px";
+				inputText.style.color = mColor;
+				inputBoxChange = true;
+			}else{
+				inputText.style.display = "none";
+				inputText.style.width = 5 + "px";
+				inputText.style.height = 5 + "px";
+				if( inputText.value.trim() != ""){
+					var svgPt = getSvgPoint(svgMain, inputText.style.left.replace("px",""), inputText.style.top.replace("px",""));
+					var fontSize = (inputText.style.fontSize).replace("px","");
+					var nObject = document.createElementNS(svgns, "text");
+					nObject.setAttributeNS(null , "x" , svgPt.x);
+					nObject.setAttributeNS(null , "y" , svgPt.y + parseInt(fontSize) * 0.8);
+					nObject.setAttribute("fill" , mColor);
+					nObject.innerHTML = inputText.value;
+					nObject.style.fontSize = inputText.style.fontSize;
+					nObject.setAttribute("id", nObjectId++);
+					svgMain.appendChild(nObject);
+					inputText.value	= "";
+				}
+			}
+		}
+
+
+		function drawing(evt){
+			var p = getSvgPoint(svgMain, evt.clientX, evt.clientY);
+			if (isDraw.checked && p && start){
+				var w = Math.abs(p.x - start.x);
+				var h = Math.abs(p.y - start.y);
+				if (p.x > start.x){
+				  p.x = start.x;
+				}
+
+				if (p.y > start.y){
+				  p.y = start.y;
+				}
+
+				if(eShape == "rect"){
+					nObject.setAttribute("x" , p.x);
+					nObject.setAttribute("y" , p.y);
+					nObject.setAttribute("width", w);
+					nObject.setAttribute("height", h);
+					nObject.setAttribute("fill", mColor);
+				}else if(eShape == "circle"){
+					nObject.setAttribute("cx", p.x);
+					nObject.setAttribute("cy", p.y);
+					nObject.setAttribute("r" , w);
+					nObject.setAttribute("fill", mColor);
+				}else if(eShape == "line"){
+					var end = getSvgPoint(svgMain, evt.clientX, evt.clientY);
+					nObject.setAttribute("x1", start.x);
+					nObject.setAttribute("y1", start.y);
+					nObject.setAttribute("x2", end.x );
+					nObject.setAttribute("y2", end.y );
+					nObject.setAttribute("stroke", mColor);
+
+				}else if(eShape == "text"){
+					if(inputBoxChange){
+						if(evt.clientX < mMouseDownPos.x ) inputText.style.left = evt.clientX + "px";
+						if(evt.clientY < mMouseDownPos.y ) inputText.style.top = evt.clientY + "px";
+						inputText.style.width = Math.abs( mMouseDownPos.x - evt.clientX ) + "px";
+						inputText.style.height = Math.abs( mMouseDownPos.y - evt.clientY ) + "px";
+						inputText.style.fontSize = h + "px";
+					}
+				}
+				if(eShape != "text"){
+					svgMain.append(nObject);
+				}
+			}
+		}
+
+		function endDraw(evt){
+			if (isDraw.checked){
+				if(eShape != "text"){
+					svgMain.removeEventListener('mousemove', drawing);
+					svgMain.removeEventListener('mouseup', endDraw);
+					if(nObject) nObject.setAttribute("id", nObjectId++);
+
+					if(eShape == "line"){
+						var useElement = document.createElementNS(svgns, "use");
+						useElement.setAttribute("href", "#" + (nObjectId - 1));
+						useElement.setAttribute("id", "u"+ (nObjectId - 1));
+						useElement.setAttribute("stroke-width" , "25");
+						useElement.setAttribute("stroke-opacity" , "0");
+						useElement.setAttribute("stroke" , "grey");
+						svgMain.append(useElement);
+					}
+				}
+			}
+		}
+
+		svgMain.addEventListener("mousemove", drawing);
+		svgMain.addEventListener("mouseup", endDraw);
+	}
+
+
+</script>
+
+
+
+
+
